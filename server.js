@@ -106,7 +106,7 @@ app.get('/gift/:slug', (req, res) => {
 });
 
 // تشغيل السيرفر
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 السيرفر شغال تمام! افتح اللينك ده في المتصفح:`);
   console.log(`http://localhost:${PORT}/gift/my-story`);
