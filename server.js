@@ -10,6 +10,7 @@ const { v2: cloudinary } = require('cloudinary');
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const MAX_UPLOAD_SIZE = Number(process.env.MAX_UPLOAD_SIZE_BYTES) || 15 * 1024 * 1024;
+const DEFAULT_PASSWORDS = Object.freeze({ open: 'aliemad', edit: 'aliemad70' });
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -61,8 +62,8 @@ const storySchema = new mongoose.Schema({
   slug: { type: String, required: true, unique: true, index: true },
   content: { type: contentSchema, default: () => ({ ...defaultContent }) },
   passwords: {
-    open: { type: String, default: '123' },
-    edit: { type: String, default: '123456' }
+    open: { type: String, default: DEFAULT_PASSWORDS.open },
+    edit: { type: String, default: DEFAULT_PASSWORDS.edit }
   },
   revision: { type: Number, default: 1 }
 }, { timestamps: true, minimize: false });
@@ -78,7 +79,7 @@ async function getStory(slug) {
   if (!key) throw new Error('invalid_slug');
   return Story.findOneAndUpdate(
     { slug: key },
-    { $setOnInsert: { slug: key, content: { ...defaultContent }, passwords: { open: '123', edit: '123456' }, revision: 1 } },
+    { $setOnInsert: { slug: key, content: { ...defaultContent }, passwords: { ...DEFAULT_PASSWORDS }, revision: 1 } },
     { new: true, upsert: true, setDefaultsOnInsert: true }
   );
 }
@@ -152,11 +153,12 @@ app.get('/api/story/:slug/open-password', async (req, res, next) => {
 
 app.post('/api/story/:slug/open-password', async (req, res, next) => {
   try {
-    if (typeof req.body.password !== 'string' || !req.body.password) return res.status(400).json({ error: 'invalid_password' });
+    const password = req.body?.password;
+    if (typeof password !== 'string' || !password.trim()) return res.status(400).json({ error: 'invalid_password' });
     const story = await getStory(req.params.slug);
-    story.passwords.open = req.body.password;
-    await story.save();
-    res.json({ password: story.passwords.open });
+    story.set('passwords.open', password);
+    const savedStory = await story.save();
+    res.json({ password: savedStory.get('passwords.open') });
   } catch (error) { next(error); }
 });
 
@@ -167,11 +169,12 @@ app.get('/api/gifts/:slug/admin/password', async (req, res, next) => {
 
 app.post('/api/gifts/:slug/admin/password', async (req, res, next) => {
   try {
-    if (typeof req.body.password !== 'string' || !req.body.password) return res.status(400).json({ error: 'invalid_password' });
+    const password = req.body?.password;
+    if (typeof password !== 'string' || !password.trim()) return res.status(400).json({ error: 'invalid_password' });
     const story = await getStory(req.params.slug);
-    story.passwords.edit = req.body.password;
-    await story.save();
-    res.json({ password: story.passwords.edit });
+    story.set('passwords.edit', password);
+    const savedStory = await story.save();
+    res.json({ password: savedStory.get('passwords.edit') });
   } catch (error) { next(error); }
 });
 
