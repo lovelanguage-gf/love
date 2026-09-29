@@ -156,9 +156,13 @@ app.post('/api/story/:slug/open-password', async (req, res, next) => {
     const password = req.body?.password;
     if (typeof password !== 'string' || !password.trim()) return res.status(400).json({ error: 'invalid_password' });
     const story = await getStory(req.params.slug);
-    story.set('passwords.open', password);
-    const savedStory = await story.save();
-    res.json({ password: savedStory.get('passwords.open') });
+    const updatedStory = await Story.findOneAndUpdate(
+      { _id: story._id },
+      { $set: { 'passwords.open': password.trim() } },
+      { new: true, runValidators: true }
+    );
+    if (!updatedStory) return res.status(404).json({ error: 'story_not_found' });
+    res.json({ password: updatedStory.get('passwords.open') });
   } catch (error) { next(error); }
 });
 
@@ -170,11 +174,15 @@ app.get('/api/gifts/:slug/admin/password', async (req, res, next) => {
 app.post('/api/gifts/:slug/admin/password', async (req, res, next) => {
   try {
     const password = req.body?.password;
-    if (typeof password !== 'string' || !password.trim()) return res.status(400).json({ error: 'invalid_password' });
+    if (typeof password !== 'string' || password.trim().length < 6) return res.status(400).json({ error: 'invalid_password' });
     const story = await getStory(req.params.slug);
-    story.set('passwords.edit', password);
-    const savedStory = await story.save();
-    res.json({ password: savedStory.get('passwords.edit') });
+    const updatedStory = await Story.findOneAndUpdate(
+      { _id: story._id },
+      { $set: { 'passwords.edit': password.trim() } },
+      { new: true, runValidators: true }
+    );
+    if (!updatedStory) return res.status(404).json({ error: 'story_not_found' });
+    res.json({ password: updatedStory.get('passwords.edit') });
   } catch (error) { next(error); }
 });
 
